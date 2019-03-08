@@ -1,0 +1,9 @@
+[package]
+name = "shpinfo"
+version = "0.1.0"
+authors = ["wsw0108 <wsw0108@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+shapefile = "0.0.3"
+clap = "2.32.0"
