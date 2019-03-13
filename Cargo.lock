@@ -80,6 +80,7 @@ name = "shpinfo"
 version = "0.1.0"
 dependencies = [
  "clap 2.32.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "dbase 0.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "shapefile 0.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 

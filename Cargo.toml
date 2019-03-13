@@ -7,3 +7,4 @@ edition = "2018"
 [dependencies]
 shapefile = "0.0.3"
 clap = "2.32.0"
+dbase = "0.0.2"
