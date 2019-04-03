@@ -14,8 +14,7 @@ const INDEX_RECORD_SIZE: usize = 2 * std::mem::size_of::<i32>();
 
 fn main() {
     let matches = App::new("shpinfo")
-        .version("0.1.0")
-        .author("Shiwei Wang <wsw0108@gmail.com>")
+        .version("0.1.1")
         .about("Display info about shapefile")
         .arg(
             Arg::with_name("verbose")
@@ -48,9 +47,10 @@ fn main() {
         let mut _source = dbase::Reader::from_path(dbf_path);
         // TODO: read field info
     }
+    let reader = shapefile::Reader::from_path(&shape_path).unwrap();
+    let header = reader.header().clone();
     if !shx_path.exists() || verbose {
         let mut count = 0;
-        let reader = shapefile::Reader::from_path(&shape_path).unwrap();
         for result in reader.iter_shapes_and_records().unwrap() {
             match result {
                 Err(_) => {}
@@ -70,6 +70,10 @@ fn main() {
             feature_count = count;
         }
     }
+    println!("Shape Type: {}", header.shape_type);
+    println!("Extent: [{}, {}, {}, {}]",
+             header.point_min[0], header.point_min[1],
+             header.point_max[0], header.point_max[1]);
     println!("Feature Count: {}", feature_count);
     if verbose {
         println!("Fields:");
