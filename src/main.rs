@@ -1,20 +1,22 @@
 extern crate clap;
-extern crate shapefile;
 extern crate dbase;
+extern crate shapefile;
 
-use clap::{App, Arg};
+use std::fs::File;
+use std::io::BufReader;
 use std::io::prelude::*;
 use std::path::Path;
-use std::io::BufReader;
-use std::fs::File;
-use std::collections::HashMap;
+
+use clap::{App, Arg};
+
+mod dbf;
 
 const HEADER_SIZE: i32 = 100;
 const INDEX_RECORD_SIZE: usize = 2 * std::mem::size_of::<i32>();
 
 fn main() {
     let matches = App::new("shpinfo")
-        .version("0.1.1")
+        .version("0.1.2")
         .about("Display info about shapefile")
         .arg(
             Arg::with_name("verbose")
@@ -33,41 +35,18 @@ fn main() {
     let verbose = matches.is_present("verbose");
     let file = matches.value_of("FILE").unwrap();
     let shape_path = Path::new(file);
-    let mut feature_count: i32 = 0;
-    let mut fields: HashMap<String, String> = HashMap::new();
     let shx_path = shape_path.with_extension("shx");
-    if shx_path.exists() {
-        let mut source = BufReader::new(File::open(&shx_path).unwrap());
-        let header = shapefile::header::Header::read_from(&mut source).unwrap();
-        let num_shapes = ((header.file_length * 2) - HEADER_SIZE) / INDEX_RECORD_SIZE as i32;
-        feature_count = num_shapes;
-    }
+    let feature_count = read_feature_count(&shx_path).unwrap();
     let dbf_path = shape_path.with_extension("dbf");
-    if dbf_path.exists() {
-        let mut _source = dbase::Reader::from_path(dbf_path);
-        // TODO: read field info
-    }
+    let fields_info = read_dbf_fields(&dbf_path).unwrap();
     let reader = shapefile::Reader::from_path(&shape_path).unwrap();
     let header = reader.header().clone();
-    if !shx_path.exists() || verbose {
-        let mut count = 0;
+    if verbose {
         for result in reader.iter_shapes_and_records().unwrap() {
             match result {
                 Err(_) => {}
-                Ok((_shape, record)) => {
-                    // println!("{}", _shape);
-                    // for (name, value) in record {
-                    //     println!("{} -> {:?}", name, value);
-                    // }
-                    for (name, _value) in record {
-                        fields.insert(name, "".to_string());
-                    }
-                }
+                Ok((_shape, _record)) => {}
             }
-            count += 1;
-        }
-        if !shx_path.exists() {
-            feature_count = count;
         }
     }
     println!("Shape Type: {}", header.shape_type);
@@ -75,11 +54,9 @@ fn main() {
              header.point_min[0], header.point_min[1],
              header.point_max[0], header.point_max[1]);
     println!("Feature Count: {}", feature_count);
-    if verbose {
-        println!("Fields:");
-        for (field, _) in fields {
-            println!("  {}", field);
-        }
+    println!("Fields:");
+    for field in fields_info {
+        println!("  {}: {:?}", field.name, field.field_type);
     }
     let cpg_path = shape_path.with_extension("cpg");
     if cpg_path.exists() {
@@ -97,4 +74,28 @@ fn main() {
         let _len = reader.read_line(&mut line).unwrap();
         println!("Projection: {}", line.trim());
     }
+}
+
+fn read_feature_count(shx_path: &Path) -> Result<i32, shapefile::Error> {
+    let mut source = BufReader::new(File::open(shx_path)?);
+
+    let header = shapefile::header::Header::read_from(&mut source)?;
+
+    Ok(((header.file_length * 2) - HEADER_SIZE) / INDEX_RECORD_SIZE as i32)
+}
+
+fn read_dbf_fields(dbf_path: &Path) -> Result<Vec<dbf::RecordFieldInfo>, dbf::Error> {
+    let mut fields_info = vec![];
+
+    let mut source = BufReader::new(File::open(dbf_path)?);
+
+    let header = dbf::Header::read_from(&mut source)?;
+    let num_fields = (header.offset_to_first_record as usize - dbf::Header::SIZE) / dbf::RecordFieldInfo::SIZE;
+
+    for _ in 0..num_fields {
+        let info = dbf::RecordFieldInfo::read_from(&mut source)?;
+        fields_info.push(info);
+    };
+
+    Ok(fields_info)
 }

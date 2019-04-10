@@ -1,6 +1,6 @@
 [package]
 name = "shpinfo"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["wsw0108 <wsw0108@gmail.com>"]
 edition = "2018"
 
@@ -8,3 +8,4 @@ edition = "2018"
 shapefile = "0.0.3"
 clap = "2.32.0"
 dbase = "0.0.2"
+byteorder = "1.3.1"
