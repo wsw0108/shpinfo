@@ -1,6 +1,6 @@
 use std::fs::File;
-use std::io::BufReader;
 use std::io::prelude::*;
+use std::io::BufReader;
 use std::path::Path;
 
 use clap::{App, Arg};
@@ -12,7 +12,7 @@ const INDEX_RECORD_SIZE: usize = 2 * std::mem::size_of::<i32>();
 
 fn main() -> Result<(), Error> {
     let matches = App::new("shpinfo")
-        .version("0.1.3")
+        .version("0.1.4")
         .about("Display info about shapefile")
         .arg(
             Arg::with_name("FILE")
@@ -85,12 +85,13 @@ fn read_dbf_fields(dbf_path: &Path) -> Result<Vec<dbf::RecordFieldInfo>, dbf::Er
     let mut source = BufReader::new(File::open(dbf_path)?);
 
     let header = dbf::Header::read_from(&mut source)?;
-    let num_fields = (header.offset_to_first_record as usize - dbf::Header::SIZE) / dbf::RecordFieldInfo::SIZE;
+    let num_fields =
+        (header.offset_to_first_record as usize - dbf::Header::SIZE) / dbf::RecordFieldInfo::SIZE;
 
     for _ in 0..num_fields {
         let info = dbf::RecordFieldInfo::read_from(&mut source)?;
         fields_info.push(info);
-    };
+    }
 
     Ok(fields_info)
 }
@@ -105,13 +106,17 @@ fn process_file(file: &Path) -> Result<i32, Error> {
     let reader = shapefile::Reader::from_path(&shape_path)?;
     let header = reader.header();
     println!("Shape Type: {}", header.shape_type);
-    println!("Extent: [{}, {}, {}, {}]",
-             header.point_min[0], header.point_min[1],
-             header.point_max[0], header.point_max[1]);
+    println!(
+        "Extent: [{}, {}, {}, {}]",
+        header.point_min[0], header.point_min[1], header.point_max[0], header.point_max[1]
+    );
     println!("Feature Count: {}", feature_count);
     println!("Fields:");
     for field in fields_info {
-        println!("  {}: {:?}", field.name, field.field_type);
+        println!(
+            "  {}: {:?}/{}/{}",
+            field.name, field.field_type, field.record_length, field.num_decimal_places
+        );
     }
     let cpg_path = shape_path.with_extension("cpg");
     if cpg_path.exists() {
